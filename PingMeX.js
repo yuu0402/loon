@@ -46,6 +46,7 @@ function toNum(val, defVal) {
 const DEBUG = toBool(args.debug, false);
 const VIDEO_ENABLE = toBool(args.video_enable, true);
 const RETRY_COUNT = toNum(args.retry_count, 1);
+const rotateKey = 'pingmex_single_cursor_v1';
 const rotateKey = 'pingme_accounts_rotate_cursor_v1';
 
 function log(...msg) {
@@ -489,23 +490,13 @@ async function handleCron() {
   const total = ids.length;
   let rotateCursor = Number($persistentStore.read(rotateKey) || 0);
   if (!Number.isFinite(rotateCursor) || rotateCursor < 0) rotateCursor = 0;
-  const start = rotateCursor % total;
-  const runIds = ids.slice(start).concat(ids.slice(0, start));
-  bizLog(`本次轮换起点：第 ${start + 1}/${total} 个账号`);
-  log('RUN IDS', runIds);
+  const idx = rotateCursor % total;
+  const id = ids[idx];
 
-  const results = [];
-  for (let i = 0; i < runIds.length; i++) {
-    const originalIndex = ids.indexOf(runIds[i]);
-    const text = await runAccount(store.accounts[runIds[i]], originalIndex, total);
-    results.push(text);
-    if (i < runIds.length - 1) {
-      bizLog(`账号间等待：${ACCOUNT_GAP}ms（约 ${Math.round(ACCOUNT_GAP / 1000)} 秒）`);
-      await sleep(ACCOUNT_GAP);
-    }
-  }
-  $persistentStore.write(String((start + 1) % total), rotateKey);
-  notify(`🎉 全部完成 (${total}个账号)`, results.join('\n———\n'));
+  bizLog(`本次轮跑：第 ${idx + 1}/${total} 个账号`);
+  const text = await runAccount(store.accounts[id], idx, total);
+  $persistentStore.write(String((idx + 1) % total), rotateKey);
+  notify(`🎉 本次完成 (${idx + 1}/${total})`, text);
   $done();
 }
 
