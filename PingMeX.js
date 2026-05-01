@@ -47,7 +47,6 @@ const DEBUG = toBool(args.debug, false);
 const VIDEO_ENABLE = toBool(args.video_enable, true);
 const RETRY_COUNT = toNum(args.retry_count, 1);
 const rotateKey = 'pingmex_single_cursor_v1';
-const rotateKey = 'pingme_accounts_rotate_cursor_v1';
 
 function log(...msg) {
   if (DEBUG) console.log(`[${scriptName}] ` + msg.map(x => typeof x === 'string' ? x : JSON.stringify(x)).join(' '));
