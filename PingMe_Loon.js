@@ -258,11 +258,18 @@ function accountListText(store) {
 
 function manageAccountsIfNeeded(store) {
   const ids = (store.order || []).filter(id => store.accounts[id]);
+  const action = String(ARG.action || '').trim();
+  if (!action) return false;
 
-  if (ARG.delete_index) {
-    const idx = Number(ARG.delete_index);
+  if (action === 'list') {
+    notify('📋 PingMe账号列表', accountListText(store));
+    return true;
+  }
+
+  if (/^del:\d+$/.test(action)) {
+    const idx = Number(action.split(':')[1]);
     if (!Number.isInteger(idx) || idx < 1 || idx > ids.length) {
-      notify('⚠️ 删除失败', `序号无效：${ARG.delete_index}\n当前账号：\n${accountListText(store)}`);
+      notify('⚠️ 删除失败', `序号无效：${idx}\n当前账号：\n${accountListText(store)}`);
       return true;
     }
     const id = ids[idx - 1];
@@ -270,31 +277,28 @@ function manageAccountsIfNeeded(store) {
     delete store.accounts[id];
     store.order = store.order.filter(x => x !== id);
     saveStore(store);
-    notify('✅ 删除成功', `已删除第 ${idx} 个账号：${alias}\n剩余账号：\n${accountListText(store)}`);
+    notify('✅ 删除成功', `已删除第 ${idx} 个账号：${alias}\n剩余账号：\n${accountListText(store)}\n请清空 action`);
     return true;
   }
 
-  if (ARG.rename_index || ARG.rename_name) {
-    const idx = Number(ARG.rename_index);
-    const name = String(ARG.rename_name || '').trim();
+  if (/^rename:\d+:.+/.test(action)) {
+    const parts = action.split(':');
+    const idx = Number(parts[1]);
+    const name = parts.slice(2).join(':').trim();
     if (!Number.isInteger(idx) || idx < 1 || idx > ids.length || !name) {
-      notify('⚠️ 备注失败', `请填写有效序号和备注名\n当前账号：\n${accountListText(store)}`);
+      notify('⚠️ 备注失败', `格式：rename:序号:备注名\n例如 rename:1:主号\n当前账号：\n${accountListText(store)}`);
       return true;
     }
     const id = ids[idx - 1];
     store.accounts[id].alias = name;
     store.accounts[id].updatedAt = Date.now();
     saveStore(store);
-    notify('✅ 备注成功', `第 ${idx} 个账号已改为：${name}\n当前账号：\n${accountListText(store)}`);
+    notify('✅ 备注成功', `第 ${idx} 个账号已改为：${name}\n当前账号：\n${accountListText(store)}\n请清空 action`);
     return true;
   }
 
-  if (toBool(ARG.list_accounts)) {
-    notify('📋 PingMe账号列表', accountListText(store));
-    return true;
-  }
-
-  return false;
+  notify('⚠️ 管理指令无效', `支持：\nlist\ndel:3\nrename:1:主号\n当前填写：${action}`);
+  return true;
 }
 
 function sleep(ms) {
