@@ -57,6 +57,10 @@ function html(body) {
   </style></head><body><h1>PingMe 账号管理</h1>${body}<div class="card muted">如果管理后没有变化，请刷新页面。此页面由 Loon 本地脚本生成。</div></body></html>`;
 }
 
+function sendRedirect(url) {
+  $done({ response: { status: 302, headers: { Location: url, 'Cache-Control': 'no-cache' }, body: '' } });
+}
+
 function renderHome(msg) {
   const store = loadStore();
   const ids = idsOf(store);
@@ -91,36 +95,37 @@ function mainWeb() {
 
   if (path.startsWith('/delete')) {
     const idx = Number(q.index);
-    if (q.confirm !== '1' || !Number.isInteger(idx) || idx < 1 || idx > ids.length) return sendHtml(renderHome('删除参数无效'));
+    if (q.confirm !== '1' || !Number.isInteger(idx) || idx < 1 || idx > ids.length) return sendRedirect('/?msg=' + encodeURIComponent('删除参数无效'));
     const id = ids[idx - 1];
     const alias = store.accounts[id].alias || id;
     delete store.accounts[id];
     store.order = store.order.filter(x => x !== id);
     saveStore(store);
     notify('✅ 删除成功', `已删除第 ${idx} 个账号：${alias}`);
-    return sendHtml(renderHome(`已删除第 ${idx} 个账号：${alias}`));
+    return sendRedirect('/?msg=' + encodeURIComponent(`已删除第 ${idx} 个账号：${alias}`));
   }
 
   if (path.startsWith('/rename')) {
     const idx = Number(q.index);
     const name = String(q.name || '').trim();
-    if (!Number.isInteger(idx) || idx < 1 || idx > ids.length || !name) return sendHtml(renderHome('备注参数无效'));
+    if (!Number.isInteger(idx) || idx < 1 || idx > ids.length || !name) return sendRedirect('/?msg=' + encodeURIComponent('备注参数无效'));
     const id = ids[idx - 1];
     store.accounts[id].alias = name;
     store.accounts[id].updatedAt = Date.now();
     saveStore(store);
     notify('✅ 备注成功', `第 ${idx} 个账号已改为：${name}`);
-    return sendHtml(renderHome(`第 ${idx} 个账号已改为：${name}`));
+    return sendRedirect('/?msg=' + encodeURIComponent(`第 ${idx} 个账号已改为：${name}`));
   }
 
   if (path.startsWith('/clear')) {
-    if (q.confirm !== '1') return sendHtml(renderHome('清空参数无效'));
+    if (q.confirm !== '1') return sendRedirect('/?msg=' + encodeURIComponent('清空参数无效'));
     saveStore({ version: 1, accounts: {}, order: [] });
     notify('✅ 清空成功', '已清空全部 PingMe 账号数据');
-    return sendHtml(renderHome('已清空全部 PingMe 账号数据'));
+    return sendRedirect('/?msg=' + encodeURIComponent('已清空全部 PingMe 账号数据'));
   }
 
-  return sendHtml(renderHome(''));
+  const msg = q.msg ? decodeURIComponent(q.msg) : '';
+  return sendHtml(renderHome(msg));
 }
 
 if (typeof $request !== 'undefined' && $request) mainWeb();
