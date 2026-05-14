@@ -20,6 +20,27 @@ const MAX_VIDEO = 5;
 const VIDEO_DELAY = 8000;
 const ACCOUNT_GAP = 3500;
 
+function parseArgument() {
+  if (typeof $argument === 'undefined' || !$argument) return {};
+  if (typeof $argument === 'object') return $argument;
+  const obj = {};
+  String($argument).split('&').forEach(pair => {
+    const idx = pair.indexOf('=');
+    if (idx === -1) return;
+    const k = pair.slice(0, idx);
+    const v = pair.slice(idx + 1);
+    obj[k] = decodeURIComponent(v || '');
+  });
+  return obj;
+}
+
+function toBool(val) {
+  const s = String(val || '').trim().toLowerCase();
+  return ['true', '1', 'yes', 'on'].includes(s);
+}
+
+const ARG = parseArgument();
+
 const IOS_VERSIONS = ['17.5.1','17.6.1','17.4.1','17.2.1','16.7.8','17.6','17.3.1','18.0.1','17.1.2','16.6.1'];
 const IOS_SCALES = ['2.00','3.00','3.00','2.00','3.00'];
 const IPHONE_MODELS = ['iPhone14,3','iPhone13,3','iPhone15,3','iPhone16,1','iPhone14,7','iPhone13,2','iPhone15,2','iPhone12,1'];
@@ -222,6 +243,60 @@ function notify(title, body) {
   $notification.post(scriptName, title, body);
 }
 
+function bizLog(msg) {
+  console.log(`[${scriptName}] ${msg}`);
+}
+
+function accountListText(store) {
+  const ids = (store.order || []).filter(id => store.accounts[id]);
+  if (!ids.length) return '当前没有账号';
+  return ids.map((id, i) => {
+    const acc = store.accounts[id];
+    return `${i + 1}. ${acc.alias || acc.id}（id:${acc.id}）`;
+  }).join('\n');
+}
+
+function manageAccountsIfNeeded(store) {
+  const ids = (store.order || []).filter(id => store.accounts[id]);
+
+  if (ARG.delete_index) {
+    const idx = Number(ARG.delete_index);
+    if (!Number.isInteger(idx) || idx < 1 || idx > ids.length) {
+      notify('⚠️ 删除失败', `序号无效：${ARG.delete_index}\n当前账号：\n${accountListText(store)}`);
+      return true;
+    }
+    const id = ids[idx - 1];
+    const alias = store.accounts[id].alias || id;
+    delete store.accounts[id];
+    store.order = store.order.filter(x => x !== id);
+    saveStore(store);
+    notify('✅ 删除成功', `已删除第 ${idx} 个账号：${alias}\n剩余账号：\n${accountListText(store)}`);
+    return true;
+  }
+
+  if (ARG.rename_index || ARG.rename_name) {
+    const idx = Number(ARG.rename_index);
+    const name = String(ARG.rename_name || '').trim();
+    if (!Number.isInteger(idx) || idx < 1 || idx > ids.length || !name) {
+      notify('⚠️ 备注失败', `请填写有效序号和备注名\n当前账号：\n${accountListText(store)}`);
+      return true;
+    }
+    const id = ids[idx - 1];
+    store.accounts[id].alias = name;
+    store.accounts[id].updatedAt = Date.now();
+    saveStore(store);
+    notify('✅ 备注成功', `第 ${idx} 个账号已改为：${name}\n当前账号：\n${accountListText(store)}`);
+    return true;
+  }
+
+  if (toBool(ARG.list_accounts)) {
+    notify('📋 PingMe账号列表', accountListText(store));
+    return true;
+  }
+
+  return false;
+}
+
 function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
 }
@@ -242,13 +317,17 @@ function runAccount(acc, index, total) {
   const headers = buildHeaders(acc.capture, ua);
   const fakeDeviceId = genFakeDeviceId();
   const msgs = [tag];
+  let videoTotal = 0;
+  bizLog(`${tag} 开始执行`);
 
   function fetchApi(path, useFakeId) {
     const overrideId = useFakeId ? fakeDeviceId : null;
+    bizLog(`${tag} 请求接口：${path}`);
     return httpGet(buildUrl(path, acc.capture, overrideId), headers);
   }
 
   function doVideoLoop(count) {
+    bizLog(`${tag} 开始视频奖励，共 ${count} 次`);
     let i = 0;
     function next() {
       if (i >= count) return Promise.resolve();
@@ -259,17 +338,23 @@ function runAccount(acc, index, total) {
             try {
               const d = JSON.parse(res.body);
               if (d.retcode === 0) {
-                msgs.push(`🎬 视频${i}：+${d.result?.bonus || '?'} Coins`);
+                const bonus = Number(d.result?.bonus || 0);
+                videoTotal += bonus;
+                bizLog(`${tag} 视频${i}奖励：+${bonus || '?'} Coins`);
+                msgs.push(`🎬 视频${i}：+${bonus || '?'} Coins`);
                 resolve(next());
               } else {
+                bizLog(`${tag} 视频${i}结束：${d.retmsg}`);
                 msgs.push(`⏸ 视频${i}：${d.retmsg}`);
                 resolve();
               }
             } catch (e) {
+              bizLog(`${tag} 视频${i}解析失败`);
               msgs.push(`❌ 视频${i}：解析失败`);
               resolve();
             }
           }).catch(err => {
+            bizLog(`${tag} 视频${i}请求失败：${err.error || String(err)}`);
             msgs.push(`❌ 视频${i}：${err.error || '请求失败'}`);
             resolve();
           });
@@ -279,28 +364,51 @@ function runAccount(acc, index, total) {
     return next();
   }
 
+  bizLog(`${tag} 开始查询余额`);
   return fetchApi('queryBalanceAndBonus').then(res => {
     try {
       const d = JSON.parse(res.body);
-      if (d.retcode === 0) msgs.push(`💰 余额：${d.result.balance} Coins`);
-      else msgs.push(`⚠️ 查询：${d.retmsg}`);
+      if (d.retcode === 0) {
+        bizLog(`${tag} 当前余额：${d.result.balance} Coins`);
+        msgs.push(`💰 余额：${d.result.balance} Coins`);
+      } else {
+        bizLog(`${tag} 查询失败：${d.retmsg}`);
+        msgs.push(`⚠️ 查询：${d.retmsg}`);
+      }
     } catch (e) { msgs.push('❌ 查询：解析失败'); }
+    bizLog(`${tag} 开始签到`);
     return fetchApi('checkIn');
   }).then(res => {
     try {
       const d = JSON.parse(res.body);
-      if (d.retcode === 0) msgs.push(`✅ 签到：${(d.result?.bonusHint || d.retmsg || '').replace(/\n/g, ' ')}`);
-      else msgs.push(`⚠️ 签到：${d.retmsg}`);
+      if (d.retcode === 0) {
+        const text = (d.result?.bonusHint || d.retmsg || '').replace(/\n/g, ' ');
+        bizLog(`${tag} 签到成功：${text}`);
+        msgs.push(`✅ 签到：${text}`);
+      } else {
+        bizLog(`${tag} 签到失败：${d.retmsg}`);
+        msgs.push(`⚠️ 签到：${d.retmsg}`);
+      }
     } catch (e) { msgs.push('❌ 签到：解析失败'); }
     return doVideoLoop(MAX_VIDEO);
-  }).then(() => fetchApi('queryBalanceAndBonus')).then(res => {
+  }).then(() => {
+    bizLog(`${tag} 查询最终余额`);
+    return fetchApi('queryBalanceAndBonus');
+  }).then(res => {
     try {
       const d = JSON.parse(res.body);
-      if (d.retcode === 0) msgs.push(`💰 最新余额：${d.result.balance} Coins`);
+      if (d.retcode === 0) {
+        bizLog(`${tag} 最新余额：${d.result.balance} Coins；视频累计 +${Number(videoTotal.toFixed(6))} Coins`);
+        msgs.push(`💰 最新余额：${d.result.balance} Coins`);
+        msgs.push(`📊 视频累计：+${Number(videoTotal.toFixed(6))} Coins`);
+      }
     } catch (e) {}
+    bizLog(`${tag} 执行结束`);
     return msgs.join('\n');
   }).catch(err => {
+    bizLog(`${tag} 执行异常：${err.error || String(err)}`);
     msgs.push(`❌ 异常：${err.error || String(err)}`);
+    bizLog(`${tag} 执行结束`);
     return msgs.join('\n');
   });
 }
@@ -337,12 +445,15 @@ if (typeof $request !== 'undefined' && $request) {
 } else {
   const store = loadStore();
   const ids = store.order.filter(id => store.accounts[id]);
-  if (!ids.length) {
+  if (manageAccountsIfNeeded(store)) {
+    $done();
+  } else if (!ids.length) {
     notify('⚠️ 未抓到任何账号', '请先打开 PingMe 触发抓包');
     $done();
   } else {
     const total = ids.length;
     const results = [];
+    bizLog(`开始执行，共 ${total} 个账号`);
     let chain = Promise.resolve();
     ids.forEach((id, idx) => {
       chain = chain.then(() => runAccount(store.accounts[id], idx, total))
@@ -350,6 +461,7 @@ if (typeof $request !== 'undefined' && $request) {
         .then(() => idx < ids.length - 1 ? sleep(ACCOUNT_GAP) : null);
     });
     chain.then(() => {
+      bizLog(`全部完成，共 ${total} 个账号`);
       notify(`🎉 全部完成 (${total}个账号)`, results.join('\n———\n'));
       $done();
     }).catch(err => {
