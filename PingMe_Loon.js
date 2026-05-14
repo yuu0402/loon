@@ -19,6 +19,8 @@ const SECRET = '0fOiukQq7jXZV2GRi9LGlO';
 const MAX_VIDEO = 5;
 const VIDEO_DELAY = 8000;
 const ACCOUNT_GAP = 3500;
+const BATCH_SIZE = 2;
+const batchCursorKey = 'pingme_batch_cursor_v1';
 
 function parseArgument() {
   if (typeof $argument === 'undefined' || !$argument) return {};
@@ -455,16 +457,29 @@ if (typeof $request !== 'undefined' && $request) {
   } else {
     const total = ids.length;
     const results = [];
-    bizLog(`开始执行，共 ${total} 个账号`);
+
+    let cursor = Number($persistentStore.read(batchCursorKey) || 0);
+    if (!Number.isFinite(cursor) || cursor < 0) cursor = 0;
+    const start = cursor % total;
+    const runIds = [];
+    for (let i = 0; i < Math.min(BATCH_SIZE, total); i++) {
+      runIds.push(ids[(start + i) % total]);
+    }
+    const labels = runIds.map(id => `${ids.indexOf(id) + 1}/${total}`).join(', ');
+    bizLog(`开始执行，本次批次账号：${labels}`);
+
     let chain = Promise.resolve();
-    ids.forEach((id, idx) => {
-      chain = chain.then(() => runAccount(store.accounts[id], idx, total))
+    runIds.forEach((id, idx) => {
+      const realIndex = ids.indexOf(id);
+      chain = chain.then(() => runAccount(store.accounts[id], realIndex, total))
         .then(text => { results.push(text); })
-        .then(() => idx < ids.length - 1 ? sleep(ACCOUNT_GAP) : null);
+        .then(() => idx < runIds.length - 1 ? sleep(ACCOUNT_GAP) : null);
     });
     chain.then(() => {
-      bizLog(`全部完成，共 ${total} 个账号`);
-      notify(`🎉 全部完成 (${total}个账号)`, results.join('\n———\n'));
+      const nextCursor = (start + BATCH_SIZE) % total;
+      $persistentStore.write(String(nextCursor), batchCursorKey);
+      bizLog(`本批次完成，下次从第 ${nextCursor + 1}/${total} 个账号开始`);
+      notify(`🎉 本批次完成 (${runIds.length}/${total})`, results.join('\n———\n'));
       $done();
     }).catch(err => {
       notify('❌ 任务异常', results.join('\n———\n') + '\n' + (err.error || String(err)));
