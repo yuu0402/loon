@@ -449,9 +449,7 @@ if (typeof $request !== 'undefined' && $request) {
 } else {
   const store = loadStore();
   const ids = store.order.filter(id => store.accounts[id]);
-  if (manageAccountsIfNeeded(store)) {
-    $done();
-  } else if (!ids.length) {
+  if (!ids.length) {
     notify('⚠️ 未抓到任何账号', '请先打开 PingMe 触发抓包');
     $done();
   } else {
