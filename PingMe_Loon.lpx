@@ -27,4 +27,4 @@ http-request ^https?:\/\/pingme\.manage\/? script-path=https://raw.githubusercon
 sw=switch,true,tag=PingMe Cron,desc=是否开启自动签到与视频奖励任务
 sw2=switch,false,tag=PingMe获取参数,desc=如需新增账号或更新参数，请临时开启此开关
 policy=input,"PingMePool",tag=代理池策略组,desc=api.pingmeapp.net 使用的代理池/策略组名称，用于缓解多账号视频风控
-cron=input,"0 */3 * * *",tag=定时时间,desc=每 3 小时执行一次；脚本每次自动轮跑 2 个账号
+cron=input,"0 */3 * * *",tag=定时时间,desc=每 3 小时执行一次；脚本每次自动签到全部账号
