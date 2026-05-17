@@ -251,7 +251,7 @@ function bizLog(msg) {
 
 function accountListText(store) {
   const ids = (store.order || []).filter(id => store.accounts[id]);
-  if (!ids.length) return '当前没有账号';
+  if (!ids.length) return '暂无账号';
   return ids.map((id, i) => {
     const acc = store.accounts[id];
     return `${i + 1}. ${acc.alias || acc.id}（id:${acc.id}）`;
@@ -279,7 +279,7 @@ function manageAccountsIfNeeded(store) {
     delete store.accounts[id];
     store.order = store.order.filter(x => x !== id);
     saveStore(store);
-    notify('✅ 删除成功', `已删除第 ${idx} 个账号：${alias}\n剩余账号：\n${accountListText(store)}\n请清空 action`);
+    notify('✅ 删除成功', `已删除第 ${idx} 个账号：${alias}\n剩余账号：\n${accountListText(store)}\n请清空 action 参数`);
     return true;
   }
 
@@ -288,18 +288,18 @@ function manageAccountsIfNeeded(store) {
     const idx = Number(parts[1]);
     const name = parts.slice(2).join(':').trim();
     if (!Number.isInteger(idx) || idx < 1 || idx > ids.length || !name) {
-      notify('⚠️ 备注失败', `格式：rename:序号:备注名\n例如 rename:1:主号\n当前账号：\n${accountListText(store)}`);
+      notify('⚠️ 备注失败', `格式：rename:序号:备注名\n示例 rename:1:主号\n当前账号：\n${accountListText(store)}`);
       return true;
     }
     const id = ids[idx - 1];
     store.accounts[id].alias = name;
     store.accounts[id].updatedAt = Date.now();
     saveStore(store);
-    notify('✅ 备注成功', `第 ${idx} 个账号已改为：${name}\n当前账号：\n${accountListText(store)}\n请清空 action`);
+    notify('✅ 备注成功', `第 ${idx} 个账号已改为：${name}\n当前账号：\n${accountListText(store)}\n请清空 action 参数`);
     return true;
   }
 
-  notify('⚠️ 管理指令无效', `支持：\nlist\ndel:3\nrename:1:主号\n当前填写：${action}`);
+  notify('⚠️ 管理指令无效', `支持指令：\nlist · del:3 · rename:1:主号\n当前填写：${action}`);
   return true;
 }
 
@@ -409,12 +409,12 @@ function runAccount(acc, index, total) {
         msgs.push(`📊 视频累计：+${Number(videoTotal.toFixed(6))} Coins`);
       }
     } catch (e) {}
-    bizLog(`${tag} 执行结束`);
+    bizLog(`${tag} 执行完成`);
     return msgs.join('\n');
   }).catch(err => {
     bizLog(`${tag} 执行异常：${err.error || String(err)}`);
     msgs.push(`❌ 异常：${err.error || String(err)}`);
-    bizLog(`${tag} 执行结束`);
+    bizLog(`${tag} 执行完成`);
     return msgs.join('\n');
   });
 }
@@ -446,7 +446,7 @@ if (typeof $request !== 'undefined' && $request) {
 
   const total = store.order.length;
   notify(existed ? '🔄 账号参数已更新' : '✅ 新账号已入库', `${alias}（id:${fp}）\n当前账号总数：${total}`);
-  console.log(`【${scriptName}】${existed ? 'update' : 'add'} account ${fp}\n${JSON.stringify(store.accounts[fp], null, 2)}`);
+  console.log(`【${scriptName}】${existed ? '更新账号参数' : '新增账号入库'} ${fp}\n${JSON.stringify(store.accounts[fp], null, 2)}`);
   $done({});
 } else {
   const store = loadStore();
@@ -478,7 +478,7 @@ if (typeof $request !== 'undefined' && $request) {
     chain.then(() => {
       const nextCursor = (start + BATCH_SIZE) % total;
       $persistentStore.write(String(nextCursor), batchCursorKey);
-      bizLog(`本批次完成，下次从第 ${nextCursor + 1}/${total} 个账号开始`);
+      bizLog(`本批次执行完成，下次从第 ${nextCursor + 1}/${total} 个账号开始`);
       notify(`🎉 本批次完成 (${runIds.length}/${total})`, results.join('\n———\n'));
       $done();
     }).catch(err => {
