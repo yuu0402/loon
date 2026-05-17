@@ -2,6 +2,7 @@
 #!desc=拦截 iOS 系统更新相关域名，阻止系统更新检测/下载
 #!author=zqzess / converted for Loon by OpenClaw
 #!homepage=https://github.com/yuu0402/loon
+#!icon=https://raw.githubusercontent.com/yuu0402/loon/main/icons/apple-ios-update-block.png
 
 [Rule]
 DOMAIN,mesu.apple.com,REJECT
