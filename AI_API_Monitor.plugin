@@ -8,10 +8,12 @@
 
 [Rule]
 DOMAIN,aiapi.monitor,DIRECT
+DOMAIN,api.telegram.org,{policy}
 
 [Script]
 # 本地网页面板：浏览器打开 http://aiapi.monitor/
 http-request ^https?:\/\/aiapi\.monitor\/?(?:.*)?$ script-path=https://raw.githubusercontent.com/yuu0402/loon/main/AI_API_Monitor_Panel.js, requires-body=false, timeout=120, tag=AI API Monitor 面板
 
 [Argument]
+policy=input,"PROXY",tag=Telegram代理策略,desc=Telegram Bot API 使用的策略组；如你本地可直连可填 DIRECT
 # 无需定时任务。所有配置保存在 Loon 本地持久化存储里，不要上传 API Key / TG Bot Token 到公开仓库。
