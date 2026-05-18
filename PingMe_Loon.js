@@ -324,16 +324,15 @@ function runAccount(acc, index, total) {
   const fakeDeviceId = genFakeDeviceId();
   const msgs = [tag];
   let videoTotal = 0;
-  bizLog(`🚀 ${tag} 开始执行`);
+  bizLog(`👤 ${tag} 开始`);
 
   function fetchApi(path, useFakeId) {
     const overrideId = useFakeId ? fakeDeviceId : null;
-    bizLog(`🌐 ${tag} 请求接口：${path}`);
     return httpGet(buildUrl(path, acc.capture, overrideId), headers);
   }
 
   function doVideoLoop(count) {
-    bizLog(`🎬 ${tag} 开始视频奖励，共 ${count} 次`);
+    bizLog(`🎬 ${tag} 视频奖励：最多 ${count} 次`);
     let i = 0;
     function next() {
       if (i >= count) return Promise.resolve();
@@ -346,21 +345,21 @@ function runAccount(acc, index, total) {
               if (d.retcode === 0) {
                 const bonus = Number(d.result?.bonus || 0);
                 videoTotal += bonus;
-                bizLog(`🎬 ${tag} 视频${i}奖励：+${bonus || '?'} Coins`);
+                bizLog(`🎬 ${tag} 视频${i}：+${bonus || '?'} Coins`);
                 msgs.push(`🎬 视频${i}：+${bonus || '?'} Coins`);
                 resolve(next());
               } else {
-                bizLog(`⏸️ ${tag} 视频${i}结束：${d.retmsg}`);
+                bizLog(`⏸️ ${tag} 视频：${d.retmsg}`);
                 msgs.push(`⏸ 视频${i}：${d.retmsg}`);
                 resolve();
               }
             } catch (e) {
-              bizLog(`❌ ${tag} 视频${i}解析失败`);
+              bizLog(`❌ ${tag} 视频：解析失败`);
               msgs.push(`❌ 视频${i}：解析失败`);
               resolve();
             }
           }).catch(err => {
-            bizLog(`❌ ${tag} 视频${i}请求失败：${err.error || String(err)}`);
+            bizLog(`❌ ${tag} 视频：${err.error || String(err)}`);
             msgs.push(`❌ 视频${i}：${err.error || '请求失败'}`);
             resolve();
           });
@@ -370,29 +369,29 @@ function runAccount(acc, index, total) {
     return next();
   }
 
-  bizLog(`💰 ${tag} 开始查询余额`);
+  bizLog(`💰 ${tag} 查询余额`);
   return fetchApi('queryBalanceAndBonus').then(res => {
     try {
       const d = JSON.parse(res.body);
       if (d.retcode === 0) {
-        bizLog(`💰 ${tag} 当前余额：${d.result.balance} Coins`);
+        bizLog(`💰 ${tag} 余额：${d.result.balance} Coins`);
         msgs.push(`💰 余额：${d.result.balance} Coins`);
       } else {
-        bizLog(`⚠️ ${tag} 查询失败：${d.retmsg}`);
+        bizLog(`⚠️ ${tag} 查询：${d.retmsg}`);
         msgs.push(`⚠️ 查询：${d.retmsg}`);
       }
     } catch (e) { msgs.push('❌ 查询：解析失败'); }
-    bizLog(`📝 ${tag} 开始签到`);
+    bizLog(`📝 ${tag} 签到中`);
     return fetchApi('checkIn');
   }).then(res => {
     try {
       const d = JSON.parse(res.body);
       if (d.retcode === 0) {
         const text = (d.result?.bonusHint || d.retmsg || '').replace(/\n/g, ' ');
-        bizLog(`✅ ${tag} 签到成功：${text}`);
+        bizLog(`✅ ${tag} 签到：${text}`);
         msgs.push(`✅ 签到：${text}`);
       } else {
-        bizLog(`⚠️ ${tag} 签到失败：${d.retmsg}`);
+        bizLog(`⚠️ ${tag} 签到：${d.retmsg}`);
         msgs.push(`⚠️ 签到：${d.retmsg}`);
       }
     } catch (e) { msgs.push('❌ 签到：解析失败'); }
@@ -404,17 +403,17 @@ function runAccount(acc, index, total) {
     try {
       const d = JSON.parse(res.body);
       if (d.retcode === 0) {
-        bizLog(`📊 ${tag} 最新余额：${d.result.balance} Coins；视频累计 +${Number(videoTotal.toFixed(6))} Coins`);
+        bizLog(`📊 ${tag} 最终：${d.result.balance} Coins / 视频 +${Number(videoTotal.toFixed(6))}`);
         msgs.push(`💰 最新余额：${d.result.balance} Coins`);
         msgs.push(`📊 视频累计：+${Number(videoTotal.toFixed(6))} Coins`);
       }
     } catch (e) {}
-    bizLog(`🏁 ${tag} 执行完成`);
+    bizLog(`🏁 ${tag} 完成`);
     return msgs.join('\n');
   }).catch(err => {
-    bizLog(`❌ ${tag} 执行异常：${err.error || String(err)}`);
+    bizLog(`❌ ${tag} 异常：${err.error || String(err)}`);
     msgs.push(`❌ 异常：${err.error || String(err)}`);
-    bizLog(`🏁 ${tag} 执行完成`);
+    bizLog(`🏁 ${tag} 完成`);
     return msgs.join('\n');
   });
 }
@@ -460,7 +459,7 @@ if (typeof $request !== 'undefined' && $request) {
 
     const runIds = ids.slice();
     const labels = runIds.map(id => `${ids.indexOf(id) + 1}/${total}`).join(', ');
-    bizLog(`🚀 开始执行，本次将签到全部账号：${labels}`);
+    bizLog(`🚀 开始执行：${total} 个账号（${labels}）`);
 
     let chain = Promise.resolve();
     runIds.forEach((id, idx) => {
@@ -470,7 +469,7 @@ if (typeof $request !== 'undefined' && $request) {
         .then(() => idx < runIds.length - 1 ? sleep(ACCOUNT_GAP) : null);
     });
     chain.then(() => {
-      bizLog(`🎉 全部账号执行完成，共 ${runIds.length}/${total} 个账号`);
+      bizLog(`🎉 全部完成：${runIds.length}/${total}`);
       notify(`🎉 全部账号签到完成 (${runIds.length}/${total})`, results.join('\n━━━━━━━━━━━━\n'));
       $done();
     }).catch(err => {
