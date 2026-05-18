@@ -251,7 +251,7 @@ async function runAccount(acc, index, total) {
   let signBonus = 0;
   let videoBonusTotal = 0;
   log('RUN ACCOUNT', { index: index + 1, total, id: acc.id, alias: acc.alias, ua });
-  bizLog(`${tag} 开始执行`);
+  bizLog(`👤 ${tag} 开始`);
 
   async function fetchApi(path) {
     const url = buildUrl(path, acc.capture);
@@ -260,7 +260,7 @@ async function runAccount(acc, index, total) {
   }
 
   async function doVideoLoop(count) {
-    bizLog(`${tag} 开始视频奖励，共 ${count} 次`);
+    bizLog(`🎬 ${tag} 视频奖励：最多 ${count} 次`);
     for (let i = 1; i <= count; i++) {
       await sleep(i === 1 ? 1500 : VIDEO_DELAY);
       log('VIDEO START', i);
@@ -271,16 +271,16 @@ async function runAccount(acc, index, total) {
         if (d.retcode === 0) {
           const bonus = Number((d.result && d.result.bonus) || 0);
           videoBonusTotal += bonus;
-          bizLog(`${tag} 视频${i}奖励：+${bonus} Coins`);
+          bizLog(`🎬 ${tag} 视频${i}：+${bonus} Coins`);
           msgs.push(`🎬 视频${i}：+${bonus || '?'} Coins`);
         } else {
-          bizLog(`${tag} 视频${i}结束：${d.retmsg || '未知返回'}`);
+          bizLog(`⏸️ ${tag} 视频：${d.retmsg || '未知返回'}`);
           msgs.push(`⏸ 视频${i}：${d.retmsg || '未知返回'}`);
           break;
         }
       } catch (e) {
         log('VIDEO ERROR', i, String(e));
-        bizLog(`${tag} 视频${i}异常：${String(e)}`);
+        bizLog(`❌ ${tag} 视频：${String(e)}`);
         msgs.push(`❌ 视频${i}：${String(e)}`);
         break;
       }
@@ -288,25 +288,25 @@ async function runAccount(acc, index, total) {
   }
 
   try {
-    bizLog(`${tag} 开始查询余额`);
+    bizLog(`💰 ${tag} 查询余额`);
     let res = await fetchApi('queryBalanceAndBonus');
     try {
       const d = JSON.parse(res.body || '{}');
       log('BALANCE RESP', d);
       if (d.retcode === 0) {
-        bizLog(`${tag} 当前余额：${d.result.balance} Coins`);
+        bizLog(`💰 ${tag} 余额：${d.result.balance} Coins`);
         msgs.push(`💰 余额：${d.result.balance} Coins`);
       } else {
-        bizLog(`${tag} 查询失败：${d.retmsg || '失败'}`);
+        bizLog(`⚠️ ${tag} 查询：${d.retmsg || '失败'}`);
         msgs.push(`⚠️ 查询：${d.retmsg || '失败'}`);
       }
     } catch (e) {
       log('BALANCE PARSE ERROR', String(e));
-      bizLog(`${tag} 查询解析失败`);
+      bizLog(`❌ ${tag} 查询：解析失败`);
       msgs.push('❌ 查询：解析失败');
     }
 
-    bizLog(`${tag} 开始签到`);
+    bizLog(`📝 ${tag} 签到中`);
     res = await fetchApi('checkIn');
     try {
       const d = JSON.parse(res.body || '{}');
@@ -315,27 +315,27 @@ async function runAccount(acc, index, total) {
         const text = (d.result && d.result.bonusHint ? d.result.bonusHint : d.retmsg || '').replace(/\n/g, ' ');
         const match = text.match(/(\d+)/);
         signBonus = match ? Number(match[1]) : 0;
-        bizLog(`${tag} 签到成功：+${signBonus} Coins ${text}`);
+        bizLog(`✅ ${tag} 签到：+${signBonus} Coins ${text}`);
         msgs.push(`✅ 签到：${text}`);
       } else {
-        bizLog(`${tag} 签到失败：${d.retmsg || '失败'}`);
+        bizLog(`⚠️ ${tag} 签到：${d.retmsg || '失败'}`);
         msgs.push(`⚠️ 签到：${d.retmsg || '失败'}`);
       }
     } catch (e) {
       log('CHECKIN PARSE ERROR', String(e));
-      bizLog(`${tag} 签到解析失败`);
+      bizLog(`❌ ${tag} 签到：解析失败`);
       msgs.push('❌ 签到：解析失败');
     }
 
     await doVideoLoop(MAX_VIDEO);
 
-    bizLog(`${tag} 查询最终余额`);
+    bizLog(`🔄 ${tag} 查询最终余额`);
     res = await fetchApi('queryBalanceAndBonus');
     try {
       const d = JSON.parse(res.body || '{}');
       log('FINAL BALANCE RESP', d);
       if (d.retcode === 0) {
-        bizLog(`${tag} 最终余额：${d.result.balance} Coins；签到+${signBonus}，视频+${videoBonusTotal}`);
+        bizLog(`📊 ${tag} 最终：${d.result.balance} Coins / 签到 +${signBonus} / 视频 +${videoBonusTotal}`);
         msgs.push(`💰 最新余额：${d.result.balance} Coins`);
       }
     } catch (e) {
@@ -343,11 +343,11 @@ async function runAccount(acc, index, total) {
     }
   } catch (e) {
     log('RUN ACCOUNT ERROR', String(e));
-    bizLog(`${tag} 执行异常：${String(e)}`);
+    bizLog(`❌ ${tag} 异常：${String(e)}`);
     msgs.push(`❌ 异常：${String(e)}`);
   }
 
-  bizLog(`${tag} 执行结束`);
+  bizLog(`🏁 ${tag} 完成`);
   return msgs.join('\n');
 }
 
@@ -378,7 +378,7 @@ function handleCapture() {
   if (!existed) store.order.push(fp);
   saveStore(store);
 
-  notify(existed ? '🔄 参数已更新' : '✅ 新账号已入库', `${alias}（id:${fp}）\n当前账号总数：${store.order.length}`);
+  notify(existed ? '🔄 账号参数已更新' : '✅ 新账号已入库', `👤 ${alias}（ID:${fp}）\n📦 当前账号总数：${store.order.length}`);
   $done({});
 }
 
@@ -394,12 +394,15 @@ async function handleCron() {
 
   const total = ids.length;
   const results = [];
+  const labels = ids.map((id, i) => `${i + 1}/${total}`).join(', ');
+  bizLog(`🚀 开始执行：${total} 个账号（${labels}）`);
   for (let i = 0; i < ids.length; i++) {
     const text = await runAccount(store.accounts[ids[i]], i, total);
     results.push(text);
     if (i < ids.length - 1) await sleep(ACCOUNT_GAP);
   }
-  notify(`🎉 全部完成 (${total}个账号)`, results.join('\n———\n'));
+  bizLog(`🎉 全部完成：${total}/${total}`);
+  notify(`🎉 WeTalk 全部完成 (${total}/${total})`, results.join('\n━━━━━━━━━━━━\n'));
   $done();
 }
 
@@ -407,6 +410,6 @@ async function handleCron() {
   if (typeof $request !== 'undefined' && $request) handleCapture();
   else await handleCron();
 })().catch(err => {
-  notify('❌ 任务异常', String(err));
+  notify('❌ WeTalk 任务异常', String(err));
   $done();
 });
