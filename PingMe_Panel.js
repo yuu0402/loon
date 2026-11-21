@@ -66,7 +66,7 @@ function renderHome(msg) {
   const ids = idsOf(store);
   let body = '';
   if (msg) body += `<div class="card ok">${esc(msg)}</div>`;
-  body += `<div class="card"><b>当前账号数：${ids.length}</b><div class="row"><a class="btn gray" href="/">刷新</a><a class="btn danger" href="/clear?confirm=1">清空全部</a></div></div>`;
+  body += `<div class="card"><b>当前账号数：${ids.length}</b><div class="row"><a class="btn gray" href="/">刷新</a><a class="btn" href="/export">导出凭据 JSON</a><a class="btn gray" href="/export?raw=1">在线查看</a><a class="btn danger" href="/clear?confirm=1">清空全部</a></div><div class="muted" style="margin-top:8px">导出文件给 NAS 跑签到：下载 pingme_accounts.json 传到 NAS 即可。凭据失效后重新抓包再导一次。</div></div>`;
   if (!ids.length) {
     body += `<div class="card warn">当前没有账号。请先开启抓包并打开 PingMe 触发 queryBalanceAndBonus。</div>`;
     return html(body);
@@ -122,6 +122,34 @@ function mainWeb() {
     saveStore({ version: 1, accounts: {}, order: [] });
     notify('✅ 清空成功', '已清空全部 PingMe 账号数据');
     return sendRedirect('/?msg=' + encodeURIComponent('已清空全部 PingMe 账号数据'));
+  }
+
+  if (path.startsWith('/export')) {
+    if (!ids.length) return sendRedirect('/?msg=' + encodeURIComponent('没有账号可导出'));
+    const payload = {
+      exportedAt: Date.now(),
+      app: 'PingMe',
+      note: 'PingMe 账号凭据导出，配合 NAS 端 pingme_nas.py 使用',
+      accounts: ids.map((id, i) => {
+        const acc = store.accounts[id];
+        return {
+          index: i + 1,
+          id: acc.id,
+          alias: acc.alias || `账号${i + 1}`,
+          uaSeed: acc.uaSeed,
+          baseUA: acc.baseUA,
+          paramsRaw: acc.capture && acc.capture.paramsRaw,
+          headers: acc.capture && acc.capture.headers
+        };
+      })
+    };
+    const body = JSON.stringify(payload, null, 2);
+    if (q.raw === '1') {
+      const page = `<div class="card"><b>凭据 JSON（长按全选复制）</b><div class="row"><a class="btn gray" href="/">返回</a><a class="btn" href="/export">下载文件</a></div></div>` +
+        `<div class="card"><textarea style="width:100%;height:420px;font-family:monospace;font-size:12px" readonly>${esc(body)}</textarea></div>`;
+      return sendHtml(html(page));
+    }
+    return $done({ response: { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Content-Disposition': 'attachment; filename="pingme_accounts.json"' }, body } });
   }
 
   const msg = q.msg ? decodeURIComponent(q.msg) : '';
