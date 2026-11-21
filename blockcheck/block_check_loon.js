@@ -179,6 +179,7 @@ function runCheckHost(host, port) {
                 if (doneCount < nodeNames.length && round < maxRound) { poll(); return; }
 
                 var reachable = false;
+                var okCount = 0;
                 var items = [];
                 nodeNames.forEach(function (n) {
                   var cc = countryMap[n] || "";
@@ -187,11 +188,12 @@ function runCheckHost(host, port) {
                   var ms = '<code style="font-family: Menlo, Monaco, monospace; font-size: 12px">--.--ms</code>';
                   if (nr && Array.isArray(nr) && nr.length > 0 && nr[0] && nr[0].time !== undefined) {
                     reachable = true;
+                    okCount++;
                     ms = '<code style="font-family: Menlo, Monaco, monospace; font-size: 12px">' + formatMs(nr[0].time * 1000) + '</code>';
                   }
                   items.push({ flag: flag, ms: ms });
                 });
-                resolve({ src: "remote", ok: reachable, data: items });
+                resolve({ src: "remote", ok: reachable, okCount: okCount, total: nodeNames.length, data: items });
               }, function () {
                 if (round < maxRound) { poll(); return; }
                 resolve({ src: "remote", ok: false, error: "查询失败" });
@@ -371,6 +373,9 @@ function render(tag, node, direct, remote, gpData) {
 
   // 远端探测
   var remoteStr = '<span style="font-weight: bold">远端探测</span>: ' + (rOk ? "✅ 可达" : "❌ 不可达");
+  if (remote && remote.total) {
+    remoteStr += ' <code style="font-family: Menlo, Monaco, monospace; font-size: 12px">(' + (remote.okCount || 0) + '/' + remote.total + ')</code>';
+  }
   if (remote && remote.data && remote.data.length > 0) {
     var items = remote.data;
     for (var i = 0; i < items.length; i += 2) {
@@ -435,6 +440,7 @@ function render(tag, node, direct, remote, gpData) {
   } else if (nOk && rOk) {
     parts.push('✅ 节点正常');
   } else if (!nOk && rOk && dOk) {
+    var lowGlobal = remote && remote.total && ((remote.okCount || 0) / remote.total) <= 0.3;
     if (gpData && gpData.results) {
       var a2 = analyzeBlockSource(gpData);
       if (a2 && a2.conclusion) {
@@ -444,6 +450,9 @@ function render(tag, node, direct, remote, gpData) {
       }
     } else {
       parts.push('🚫 疑似被运营商/GFW 阻断');
+    }
+    if (lowGlobal) {
+      parts.push('⚠️ 全球探针也仅 ' + (remote.okCount || 0) + '/' + remote.total + ' 通 —— 更像机房/上游网络故障或 IP 遭大面积封锁，不止国内的问题');
     }
   } else if (!nOk && !rOk && dOk) {
     parts.push('💤 节点离线');
