@@ -55,3 +55,14 @@ cron "30 8,20 * * *" script-path=https://raw.githubusercontent.com/yuu0402/loon/
 4. 视频 `bonus` 为 0 时显示 `+?`，不是 `+0`。
 5. 面板写操作全是 GET，`/clear?confirm=1` 一个 `<img>` 就能触发。
 6. 面板 `q.msg` 被解码两次，`/?msg=100%25` 直接抛 `URIError`。
+
+---
+
+## WeTalk 自动签到（2026-11-21 新增）
+
+- 源：TG@ZenMoFiShi 2026-09-15 版（30.6.3），字节级未改，仅配 Loon 插件壳
+- `WeTalk.js`：抓包入库（email 为键）+ 签到 + 视频奖励（MAX_VIDEO=1，撞限流码 200007 自动停）
+- `WeTalk.plugin`：MITM `api.wetalkapp.com` + 抓包 http-request + cron `20 8,20 * * *`
+- 用法：启用插件 → 打开 WeTalk App 触发余额查询 → 收「✅ 新账号已入库」通知 → 每天 8:20/20:20 自动跑
+- 与 PingMe 同门：同款 MD5 签名（SECRET 相同）、同套接口（queryBalanceAndBonus / checkIn / videoBonus）
+- vm 沙箱实测：入库键小写邮箱 ✅、签名 32hex+UTC signDate ✅、任务流 查询→签到→查询→视频→查询 共 5 请求 ✅、通知齐全 ✅
