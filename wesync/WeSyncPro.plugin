@@ -1,0 +1,12 @@
+#!name=WeSync Pro 解锁
+#!desc=拦截 WeSync 订阅状态接口，本地改写为 Pro 激活（is_active/pro_entitled/expires_at）。覆盖 cf/hs 双 API 边缘节点。需开启 MITM 并信任证书。作者：山田小姐
+#!openUrl=
+#!tag=解锁
+#!icon=https://static.wesync.cloud/app_icon.png
+#!date=2026-11-21
+
+[Script]
+http-response ^https://(cf|hs)\.wesync\.cloud/api/subscription/status script-path=https://raw.githubusercontent.com/yuu0402/loon/main/wesync/WeSyncPro.js, requires-body=true, timeout=15, tag=WeSync Pro 解锁
+
+[Mitm]
+hostname = cf.wesync.cloud, hs.wesync.cloud
