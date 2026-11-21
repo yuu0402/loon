@@ -1,0 +1,13 @@
+#!name = 节点阻断检测
+#!desc = 长按节点检测连通性，判断是否被运营商/GFW 阻断。check-host 全球十节点 TCP 探测 + globalping 国内三网定位。移植自 QX @RavelloH，Loon 适配山田。
+#!openUrl =
+#!author = RavelloH / 山田
+#!tag = 节点检测
+#!system = iOS
+#!loon_version = 3.2.1(372)
+#!homepage = https://gist.github.com/RavelloH/383354955aa3800e1d7e98666e11e16f
+#!icon = https://raw.githubusercontent.com/luestr/IconResource/main/Other_icon/120px/Node_detection_tool.png
+#!date = 2026-11-21
+
+[Script]
+generic script-path = https://raw.githubusercontent.com/yuu0402/loon/main/blockcheck/block_check_loon.js, tag = 节点阻断检测, img-url = bolt.horizontal.icloud.fill.system, timeout = 120
