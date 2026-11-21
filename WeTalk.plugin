@@ -1,0 +1,15 @@
+#!name=WeTalk自动签到
+#!desc=抓包入库 + 定时签到 + 视频奖励。用法：启用插件 → 打开 WeTalk App（进个人中心触发余额查询）→ 收到「新账号已入库」通知即完成。原作者 TG@ZenMoFiShi，脚本与上游 2026-09-15 版保持一致。
+#!author=ZenMoFiShi
+#!homepage=https://github.com/yuu0402/loon
+#!icon=https://raw.githubusercontent.com/BOBOLAOSHIV587/Rules/main/Icons/AppIcons/Image/App/WeTalk.png
+#!tag=签到
+
+[Script]
+http-request ^https:\/\/api\.wetalkapp\.com\/app\/(?:queryBalanceAndBonus|checkIn|videoBonus) script-path=https://raw.githubusercontent.com/yuu0402/loon/main/WeTalk.js, timeout=60, tag=WeTalk_抓包入库
+
+[Task]
+cron "20 8,20 * * *" script-path=https://raw.githubusercontent.com/yuu0402/loon/main/WeTalk.js, timeout=180, tag=WeTalk_签到
+
+[MITM]
+hostname = api.wetalkapp.com
