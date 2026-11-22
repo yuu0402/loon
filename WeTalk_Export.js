@@ -48,9 +48,11 @@ function mainWeb() {
       '，$prefs=' + (typeof $prefs !== 'undefined') +
       '，原始数据=' + (raw ? ('长度 ' + raw.length) : '无');
     return resp('<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
-      '<title>WeTalk 账号导出</title><h3>账号库为空</h3>' +
-      '<p>请先打开 WeTalk App（登录状态）刷一下余额，收到「已入库」通知后再回来刷新本页。</p>' +
-      '<p style="color:#888;font-size:12px">' + esc(diag) + '</p>', 'text/html');
+      '<title>WeTalk 账号导出</title>' + PAGE_CSS +
+      '<div class="wrap"><div class="card"><div class="hd"><span class="logo">📞</span><span>WeTalk 账号导出</span></div>' +
+      '<div class="empty">账号库为空</div>' +
+      '<div class="tip">打开 WeTalk App（登录状态）刷一下余额<br>收到「已入库」通知后回来刷新本页</div>' +
+      '<div class="diag">' + esc(diag) + '</div></div></div>', 'text/html');
   }
 
   const accounts = ids.map((id, i) => {
@@ -78,9 +80,10 @@ function mainWeb() {
     '<tr><td>' + a.index + '</td><td>' + esc(a.alias) + '</td><td>' + esc(a.id) + '</td><td>' +
     (a.updatedAt ? new Date(a.updatedAt).toLocaleString('zh-CN') : '-') + '</td></tr>').join('');
   return resp('<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
-    '<title>WeTalk 账号导出</title><h3>WeTalk 账号（' + accounts.length + '）</h3>' +
-    '<table border="1" cellpadding="6" cellspacing="0"><tr><th>#</th><th>备注</th><th>账号键</th><th>更新时间</th></tr>' + rows + '</table>' +
-    '<p><a href="/export">⬇️ 下载 wetalk_accounts.json</a></p>', 'text/html');
+    '<title>WeTalk 账号导出</title>' + PAGE_CSS +
+    '<div class="wrap"><div class="card"><div class="hd"><span class="logo">📞</span><span>WeTalk 账号导出</span><span class="badge">' + accounts.length + ' 个账号</span></div>' +
+    '<table><tr><th>#</th><th>备注</th><th>账号键</th><th>更新时间</th></tr>' + rows + '</table>' +
+    '<a class="btn" href="/export">⬇️ 下载 wetalk_accounts.json</a></div></div>', 'text/html');
 }
 
 if (typeof $request !== 'undefined' && $request) {
